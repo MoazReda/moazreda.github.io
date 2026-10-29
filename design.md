@@ -69,7 +69,7 @@ Recruiter bar (open to roles, Giza), lens hero, lead and diff row, About (scroll
 - Sentence case. No "passionate", "leveraging", "cutting-edge", "seamless", "I'm a ... who loves".
 - Say what failed. "This failed because..." is allowed and encouraged.
 - Moaz writes the hero line, the About and the Notes. Anything marked `TODO(moaz)` in the source is his to write, in his own voice.
-- Privacy: no sentence from the private WhatsApp-derived data appears on the site. Every example is invented. The corpus licence is CC-BY-NC, so the page says the model is for non-commercial use.
+- Privacy: no sentence from the private WhatsApp-derived data appears on the site. Every example is invented.
 
 ## Quality floor
 
