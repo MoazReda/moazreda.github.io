@@ -1,0 +1,202 @@
+---
+/**
+ * In-browser Franco translator (see design.md). The model downloads only when
+ * the visitor presses Translate, then runs locally with onnxruntime-web.
+ * Needs public/models/franco_ar.onnx and public/models/ar_franco.onnx.
+ */
+const examples = ['ezayak ya sa7by', '3ayez ashof el film da', '7abibi enta fen', 'mesh 3aref a3mel eh'];
+---
+
+<section class="demo-box" id="demo" data-franco aria-labelledby="demo-h">
+  <h2 id="demo-h">Try it here</h2>
+  <p class="meta">
+    The model (about 8 MB) downloads when you first press Translate and runs in your browser. Nothing you type is sent
+    anywhere.
+  </p>
+  <fieldset class="dir">
+    <legend class="sr">Direction</legend>
+    <label><input type="radio" name="dir" value="franco_to_arabic" checked /> Franco to Arabic</label>
+    <label><input type="radio" name="dir" value="arabic_to_franco" /> Arabic to Franco</label>
+  </fieldset>
+  <label class="sr" for="franco-in">Text to translate</label>
+  <input id="franco-in" type="text" autocomplete="off" spellcheck="false" value="ezayak ya sa7by" />
+  <div class="row">
+    <button type="button" data-go>Translate</button>
+    <ul class="chips">
+      {examples.map((e) => <li><button type="button" class="chip" data-ex={e}>{e}</button></li>)}
+    </ul>
+  </div>
+  <progress data-bar max="100" value="0" hidden></progress>
+  <p class="out" data-out lang="ar" dir="rtl" aria-live="polite"></p>
+  <p class="meta" data-status aria-live="polite"></p>
+  <p class="meta"><button type="button" class="linkish" data-parity>Check against the Python outputs (60 sentences)</button></p>
+</section>
+
+<script>
+  import { prepare, type Bundle, type Direction } from '../lib/franco';
+
+  const root = document.querySelector<HTMLElement>('[data-franco]')!;
+  const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+  const input = $<HTMLInputElement>('#franco-in');
+  const out = $('[data-out]');
+  const status = $('[data-status]');
+  const bar = $<HTMLProgressElement>('[data-bar]');
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  let bundle: Bundle | null = null;
+  let ort: typeof import('onnxruntime-web/wasm') | null = null;
+  const sessions = new Map<Direction, any>();
+
+  const dir = () => root.querySelector<HTMLInputElement>('input[name=dir]:checked')!.value as Direction;
+
+  async function download(url: string, size: number): Promise<ArrayBuffer> {
+    const res = await fetch(url);
+    if (!res.ok || !res.body) throw new Error(`model file not found (${url})`);
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let got = 0;
+    bar.hidden = false;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      bar.value = Math.min(100, (got / size) * 100);
+    }
+    bar.hidden = true;
+    const all = new Uint8Array(got);
+    let o = 0;
+    for (const c of chunks) { all.set(c, o); o += c.length; }
+    return all.buffer;
+  }
+
+  async function session(d: Direction) {
+    if (!bundle) bundle = await (await fetch(`${base}/models/franco.json`)).json();
+    if (!ort) {
+      ort = await import('onnxruntime-web/wasm');
+      ort.env.wasm.wasmPaths = `${base}/ort/`;
+      ort.env.wasm.numThreads = 1; // GitHub Pages cannot send the headers threads need
+    }
+    if (!sessions.has(d)) {
+      const m = bundle!.models[d];
+      status.textContent = 'Downloading the model...';
+      const buf = await download(`${base}/models/${m.file}`, m.size_bytes);
+      sessions.set(d, await ort.InferenceSession.create(buf, { executionProviders: ['wasm'] }));
+    }
+    return sessions.get(d);
+  }
+
+  async function run(text: string, d: Direction) {
+    const s = await session(d);
+    const { ids, tgt } = prepare(text, d, bundle!);
+    const t0 = performance.now();
+    const feeds = { src: new ort!.Tensor('int64', BigInt64Array.from(ids.map(BigInt)), [1, ids.length]) };
+    const res = await s.run(feeds);
+    const tokens = Array.from(res.tokens.data as BigInt64Array, Number);
+    return { ids: tokens, text: tgt.decode(tokens), ms: performance.now() - t0 };
+  }
+
+  let typing = 0;
+  async function translate() {
+    const text = input.value.trim();
+    if (!text) return;
+    const d = dir();
+    out.dir = d === 'franco_to_arabic' ? 'rtl' : 'ltr';
+    out.lang = d === 'franco_to_arabic' ? 'ar' : 'en';
+    try {
+      const r = await run(text, d);
+      // Type the result one character at a time as plain text, so Arabic letters keep
+      // joining (separate per-letter elements would break the shaping).
+      const chars = [...r.text];
+      const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const my = ++typing;
+      out.textContent = '';
+      if (calm) out.textContent = r.text;
+      else {
+        for (let i = 1; i <= chars.length && my === typing; i++) {
+          out.textContent = chars.slice(0, i).join('');
+          await new Promise((res) => setTimeout(res, 55));
+        }
+      }
+      status.textContent = `${Math.round(r.ms)} ms, in your browser.`;
+    } catch (e) {
+      out.textContent = '';
+      status.textContent = `Could not run the model: ${(e as Error).message}`;
+    }
+  }
+
+  $('[data-go]').addEventListener('click', translate);
+  input.addEventListener('keydown', (e) => e.key === 'Enter' && translate());
+  root.querySelectorAll<HTMLInputElement>('input[name=dir]').forEach((r) =>
+    r.addEventListener('change', () => {
+      out.textContent = '';
+      input.value = r.value === 'franco_to_arabic' ? 'ezayak ya sa7by' : 'ازيك يا صاحبي';
+    }),
+  );
+  root.querySelectorAll<HTMLElement>('[data-ex]').forEach((b) =>
+    b.addEventListener('click', () => {
+      root.querySelector<HTMLInputElement>('input[value=franco_to_arabic]')!.checked = true;
+      input.value = b.dataset.ex!;
+      translate();
+    }),
+  );
+
+  // Runs the 60 recorded sentences and compares token ids with the Python outputs.
+  $('[data-parity]').addEventListener('click', async () => {
+    try {
+      const par = await (await fetch(`${base}/models/parity.json`)).json();
+      let ok = 0, n = 0;
+      for (const d of Object.keys(par) as Direction[]) {
+        for (const t of par[d]) {
+          const r = await run(t.input, d);
+          const got = r.ids.slice(0, r.ids.indexOf(2) + 1);
+          n++;
+          if (JSON.stringify(got) === JSON.stringify(t.output_ids)) ok++;
+          status.textContent = `Checking ${n}/60...`;
+        }
+      }
+      status.textContent = `Parity: ${ok} of ${n} outputs identical to the Python model.`;
+    } catch (e) {
+      status.textContent = `Could not run the check: ${(e as Error).message}`;
+    }
+  });
+</script>
+
+<style>
+  .demo-box {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 20px;
+    margin: 8px 0 24px;
+    max-width: 62ch;
+  }
+  h2 { margin-bottom: 8px; }
+  .dir { border: 0; padding: 0; margin: 12px 0; display: flex; gap: 20px; flex-wrap: wrap; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  input[type='text'] {
+    width: 100%;
+    font: inherit;
+    padding: 10px 12px;
+    border: 1px solid var(--ink-soft);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 2px;
+  }
+  .row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    font: 600 16px var(--font-body);
+    padding: 8px 16px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 0;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .chips { list-style: none; display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding: 0; }
+  .chip { background: transparent; color: var(--ink); border: 1px solid var(--rule); font-weight: 400; font-size: 15px; padding: 6px 10px; }
+  .linkish { background: none; color: var(--teal); padding: 0; font-weight: 400; font-size: 15px; text-decoration: underline; }
+  progress { width: 100%; margin-top: 12px; }
+  /* The model emits one character at a time, so the output appears that way. */
+  .out { font-size: clamp(32px, 6vw, 56px); line-height: 1.7; min-height: 1.7em; margin: 12px 0 0; }
+  :global(button:focus-visible), input:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+</style>

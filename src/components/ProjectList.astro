@@ -1,0 +1,340 @@
+---
+/**
+ * ProjectList: giant names. Hover or focus sweeps a coral band across the row
+ * and shows the one-line result (design.md, Motion #5). On touch the result
+ * is always visible and there is no band.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import Icon from './Icon.astro';
+
+const hasFrancoIcon = fs.existsSync(path.join(process.cwd(), 'public', 'img', 'franco-icon.png'));
+const PLAY = 'https://play.google.com/store/apps/details?id=com.moazreda.franco_translator';
+
+// ds / ml: what I did in each role, from the project pages. Nothing here is new.
+const items = [
+  {
+    name: 'Franco',
+    href: '/projects/franco/',
+    line: 'Franco-Arabic translator. CER 0.207, offline, 37 ms. Live on Google Play.',
+    meta: '2026',
+    tools: ['Python', 'Power BI', 'ONNX Runtime', 'Flutter'],
+    ds: 'Built a 445-message test set of real chat, generated spelling variants, and error-analysed every change against it.',
+    ml: 'Trained a seq2seq from scratch, compared a 300M-parameter ByT5, exported to ONNX with decoding inside the graph.',
+  },
+  {
+    name: 'Sofara',
+    href: '/projects/sofara/',
+    line: '45 refereeing incidents, 109 officials, verdicts only from the Committee.',
+    meta: '2026',
+    tools: ['Python', 'Power BI', 'SQLite', 'GitHub Actions'],
+    ds: 'Collected incidents and expert opinions, built a constrained SQLite database, and added Wilson intervals and split scores.',
+    ml: 'No trained model yet: search is rule-based. Semantic search with Arabic embeddings is the next step.',
+  },
+  {
+    name: 'Tourasna',
+    href: '/projects/tourasna/',
+    line: 'Hieroglyph photo-to-translation pipeline: YOLOv8, a 4-layer fallback, 40 API tests. Graduation project, team leader.',
+    meta: '2024 to 2026',
+    tools: ['Python', 'Power BI', 'PyTorch', 'YOLOv8', 'FastAPI', 'SentencePiece'],
+    ds: 'Fixed 48,549 invalid labels in the detection data, machine-translated the corpus, and collected and annotated data for landmark recognition.',
+    ml: 'Fine-tuned YOLOv8m on 767 sign classes, trained an 11.8M-parameter translator, built the fallback chain and the FastAPI service.',
+  },
+  {
+    name: 'Code quality',
+    href: '/projects/code-quality/',
+    line: '16K scraped functions, 18 features, 77% accuracy vs a 62% baseline.',
+    meta: '2025',
+    tools: ['Python', 'Power BI', 'scikit-learn', 'XGBoost', 'Keras', 'pandas'],
+    ds: 'Team course project: functions scraped with the GitHub API, labelled with pylint, 18 features engineered, duplicates removed.',
+    ml: 'Team course project: logistic regression, XGBoost, a neural network and a tuned random forest (77.2%), against a 62% baseline.',
+  },
+];
+const counts = new Map<string, number>();
+items.forEach((p) => p.tools.forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1)));
+const chips = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
+---
+
+<section class="plist wrap" id="projects" aria-labelledby="work" data-plist>
+  <h2 id="work" class="sec">Projects</h2>
+  <p class="sub">Four projects, each with its own page. Choose what I did in each, or a tool to see where I used it.</p>
+  <div class="ctrl">
+    <div class="seg" role="group" aria-label="Show my work as">
+      <button type="button" aria-pressed="true" data-role="">Overview</button>
+      <button type="button" aria-pressed="false" data-role="ds">As data science</button>
+      <button type="button" aria-pressed="false" data-role="ml">As machine learning</button>
+    </div>
+  </div>
+  <div class="chips" role="group" aria-label="Filter projects by tool">
+    {chips.map((c) => <button type="button" class="chip" aria-pressed="false" data-tool={c}>{c}</button>)}
+    <span class="count" data-count aria-live="polite"></span>
+  </div>
+  <ul>
+    {items.map((p) => (
+      <li data-tools={p.tools.join('|')}>
+        <a class="row" href={p.href}>
+          <span class="name display">{p.name}</span>
+          <span class="line">
+            <span class="t-all">{p.line}</span>
+            <span class="t-ds">{p.ds}</span>
+            <span class="t-ml">{p.ml}</span>
+          </span>
+          <span class="meta">{p.meta}</span>
+        </a>
+        <div class="actions">
+          {p.name === 'Franco' && (
+            <>
+              {hasFrancoIcon && <img class="appicon" src="/img/franco-icon.png" alt="" width="40" height="40" />}
+              <a class="act" href="/projects/franco/#demo">Try it here</a>
+              <a class="play" href={PLAY} rel="noopener" aria-label="Get Franco on Google Play">
+                <Icon name="play" size={24} />
+                <span><small>GET IT ON</small>Google Play</span>
+              </a>
+            </>
+          )}
+          {p.name === 'Sofara' && (
+            <>
+              <a class="act" href="https://moazreda.github.io/sofara/" rel="noopener">Open the live demo</a>
+              <a class="ic" href="https://github.com/MoazReda/sofara" rel="noopener" aria-label="Sofara on GitHub" title="GitHub"><Icon name="github" /></a>
+            </>
+          )}
+          {p.name === 'Tourasna' && (
+            <>
+              <a class="act" href="/projects/tourasna/#vid">Watch the demo</a>
+              <a class="ic" href="https://github.com/Tourasna/Tourasna" rel="noopener" aria-label="Tourasna on GitHub" title="GitHub"><Icon name="github" /></a>
+            </>
+          )}
+          {p.name === 'Code quality' && <a class="act" href={p.href}>Read the results</a>}
+        </div>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-plist]');
+  if (root) {
+    const chips = [...root.querySelectorAll<HTMLButtonElement>('.chip')];
+    const rows = [...root.querySelectorAll<HTMLElement>('li[data-tools]')];
+    const out = root.querySelector<HTMLElement>('[data-count]')!;
+    const segs = [...root.querySelectorAll<HTMLButtonElement>('.seg button')];
+    let active = '';
+    const apply = (tool: string) => {
+      rows.forEach((li) => {
+        const on = !tool || li.dataset.tools!.split('|').includes(tool);
+        li.classList.toggle('dim', !on);
+      });
+      const n = rows.filter((li) => !li.classList.contains('dim')).length;
+      out.textContent = tool ? `${tool}: ${n} of ${rows.length} projects` : '';
+    };
+    chips.forEach((c) => {
+      c.addEventListener('click', () => {
+        active = active === c.dataset.tool ? '' : c.dataset.tool!;
+        chips.forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tool === active)));
+        apply(active);
+      });
+      c.addEventListener('pointerenter', () => apply(c.dataset.tool!));
+      c.addEventListener('pointerleave', () => apply(active));
+    });
+    segs.forEach((s) =>
+      s.addEventListener('click', () => {
+        root.dataset.role = s.dataset.role!;
+        segs.forEach((x) => x.setAttribute('aria-pressed', String(x === s)));
+      }),
+    );
+  }
+</script>
+
+<style>
+  .plist {
+    padding-top: 96px;
+    scroll-margin-top: 64px;
+  }
+  .sec {
+    font-size: clamp(34px, 5vw, 56px);
+    margin: 0 0 8px;
+  }
+  .sub {
+    color: var(--ink-soft);
+    margin: 0 0 18px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .chip {
+    font: inherit;
+    font-size: 14px;
+    padding: 4px 12px;
+    color: var(--ink);
+    background: none;
+    border: 1px solid var(--rule);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+  .chip:hover,
+  .chip:focus-visible {
+    border-color: var(--teal);
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--teal);
+    color: #0d0f10;
+    border-color: var(--teal);
+  }
+  .count {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-inline-start: 6px;
+  }
+  li {
+    transition: opacity 0.25s;
+  }
+  li.dim {
+    opacity: 0.22;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  li {
+    border-bottom: 1px solid var(--rule);
+  }
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 340px);
+    grid-template-areas: 'name line' 'name meta';
+    align-items: center;
+    column-gap: 32px;
+    padding: 18px 0;
+    color: var(--ink);
+    text-decoration: none;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .row::before {
+    content: '';
+    position: absolute;
+    inset: 0 -20px;
+    background: var(--raspberry);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+    z-index: -1;
+  }
+  .name {
+    grid-area: name;
+    font-size: clamp(44px, 9vw, 128px);
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .line {
+    grid-area: line;
+    font-size: 16px;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .meta {
+    grid-area: meta;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .row:hover,
+  .row:focus-visible {
+    color: #0d0f10;
+    outline-offset: -2px;
+  }
+  .row:hover::before,
+  .row:focus-visible::before {
+    transform: scaleX(1);
+  }
+  .row:hover .name,
+  .row:focus-visible .name {
+    transform: translateX(12px);
+  }
+  .row:hover .line,
+  .row:focus-visible .line {
+    opacity: 1;
+    transform: none;
+  }
+  .row:hover .meta,
+  .row:focus-visible .meta {
+    color: #0d0f10;
+  }
+  @media (hover: none), (max-width: 860px) {
+    .row {
+      grid-template-columns: 1fr;
+      grid-template-areas: 'name' 'line' 'meta';
+      row-gap: 4px;
+    }
+    .line {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .row::before,
+    .name,
+    .line {
+      transition: none;
+    }
+  }
+  /* role view: swap the one-line text; show it without hover */
+  .t-ds, .t-ml { display: none; }
+  [data-role='ds'] .t-all, [data-role='ml'] .t-all { display: none; }
+  [data-role='ds'] .t-ds { display: inline; }
+  [data-role='ml'] .t-ml { display: inline; }
+  [data-role='ds'] .line, [data-role='ml'] .line { opacity: 1; transform: none; }
+  .ctrl { margin-bottom: 14px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); }
+  .seg button {
+    font: inherit;
+    font-size: 15px;
+    padding: 6px 16px;
+    background: none;
+    color: var(--ink);
+    border: 0;
+    cursor: pointer;
+  }
+  .seg button + button { border-inline-start: 1px solid var(--rule); }
+  .seg button[aria-pressed='true'] { background: var(--teal); color: #0d0f10; }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 0 0 18px;
+    min-height: 8px;
+  }
+  .appicon { width: 40px; height: 40px; border-radius: 10px; }
+  .act, .ic, .play {
+    color: var(--ink);
+    text-decoration: none;
+    border: 1px solid var(--rule);
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+  .act { padding: 6px 16px; }
+  .ic { display: grid; place-items: center; width: 38px; height: 38px; }
+  .play {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 16px 4px 12px;
+    background: #000;
+    border-color: #6b6b6b;
+    border-radius: 8px;
+    line-height: 1.1;
+    font-weight: 600;
+  }
+  .play small { display: block; font-size: 10px; font-weight: 400; letter-spacing: 0.06em; }
+  .play span { font-size: 17px; }
+  .act:hover, .act:focus-visible, .ic:hover, .ic:focus-visible { background: var(--teal); color: #0d0f10; border-color: var(--teal); }
+  .play:hover, .play:focus-visible { transform: translateY(-3px); border-color: var(--teal); }
+  li.dim .actions { pointer-events: none; }
+</style>

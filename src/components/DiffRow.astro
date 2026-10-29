@@ -1,0 +1,171 @@
+---
+/**
+ * DiffRow: the one memorable element (see design.md).
+ * Shows two versions of the same Arabic sentence, one per row, and marks
+ * each character run as "same" (teal) or "different" (raspberry) using a
+ * longest-common-subsequence over characters.
+ *
+ * Props:
+ *   source  optional input line (franco), shown above in Latin script
+ *   a, b    { label, text } the two Arabic rows to compare
+ *   animate draw the marks in once on load (home page only)
+ */
+interface Row {
+  label: string;
+  text: string;
+}
+interface Props {
+  source?: string;
+  a: Row;
+  b: Row;
+  animate?: boolean;
+}
+
+const { source, a, b, animate = false } = Astro.props;
+
+type Run = { text: string; same: boolean };
+
+// LCS over code points. Spaces never get a mark.
+function lcsMask(x: string[], y: string[]): [boolean[], boolean[]] {
+  const n = x.length;
+  const m = y.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = x[i] === y[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const mx = new Array(n).fill(false);
+  const my = new Array(m).fill(false);
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (x[i] === y[j]) {
+      mx[i] = true;
+      my[j] = true;
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  return [mx, my];
+}
+
+function toRuns(chars: string[], mask: boolean[]): (Run | { text: string; space: true })[] {
+  const out: (Run | { text: string; space: true })[] = [];
+  for (let k = 0; k < chars.length; k++) {
+    const ch = chars[k];
+    if (ch === ' ') {
+      out.push({ text: ch, space: true });
+      continue;
+    }
+    const last = out[out.length - 1] as Run | undefined;
+    if (last && !('space' in last) && last.same === mask[k]) {
+      last.text += ch;
+    } else {
+      out.push({ text: ch, same: mask[k] });
+    }
+  }
+  return out;
+}
+
+const ca = Array.from(a.text);
+const cb = Array.from(b.text);
+const [ma, mb] = lcsMask(ca, cb);
+const rows = [
+  { ...a, runs: toRuns(ca, ma) },
+  { ...b, runs: toRuns(cb, mb) },
+];
+---
+
+<figure class:list={['diff', { animate }]}>
+  {source && (
+    <div class="line">
+      <span class="who">input</span>
+      <span class="txt latin" lang="en">{source}</span>
+    </div>
+  )}
+  {rows.map((row) => {
+    let n = 0;
+    return (
+      <div class="line">
+        <span class="who">{row.label}</span>
+        <span class="txt" lang="ar" dir="rtl">
+          {row.runs.map((r) =>
+            'space' in r ? (
+              r.text
+            ) : (
+              <span class={r.same ? 'same' : 'differ'} style={`--i:${n++}`}>
+                {r.text}
+              </span>
+            ),
+          )}
+        </span>
+      </div>
+    );
+  })}
+  <slot />
+</figure>
+
+<style>
+  .diff {
+    margin: 0;
+    padding: 20px 24px 8px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .line {
+    display: grid;
+    grid-template-columns: 7.5em 1fr;
+    align-items: baseline;
+    column-gap: 16px;
+    padding-block: 6px;
+  }
+  .who {
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .txt {
+    font-size: 28px;
+    line-height: 1.7;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    /* RTL text sits next to its label instead of at the far right edge */
+    justify-self: start;
+  }
+  .txt.latin {
+    font-size: 24px;
+  }
+  .same,
+  .differ {
+    border-bottom: 2px solid transparent;
+  }
+  .same {
+    border-bottom-color: var(--teal);
+  }
+  .differ {
+    border-bottom-color: var(--raspberry);
+  }
+  .animate .same,
+  .animate .differ {
+    animation: draw 280ms calc(var(--i) * 70ms + 300ms) both;
+  }
+  @keyframes draw {
+    from {
+      border-bottom-color: transparent;
+    }
+  }
+  @media (max-width: 520px) {
+    .line {
+      grid-template-columns: 1fr;
+      row-gap: 0;
+    }
+    .txt {
+      font-size: 24px;
+    }
+  }
+</style>

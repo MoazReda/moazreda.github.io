@@ -1,0 +1,196 @@
+---
+import Base from '../../layouts/Base.astro';
+const rounds = [
+  [1, 4, 1], [2, 9, 3], [3, 8, 6], [4, 12, 4], [5, 7, 6], [6, 5, 0],
+]; // [round, incidents, with an official ruling] — aggregated from the exported DB, no referee or team columns
+const maxInc = 12;
+---
+
+<Base
+  title="Sofara: an incident library for Egyptian refereeing | Moaz Elkhashab"
+  description="A searchable Arabic library of Egyptian Premier League refereeing incidents, built on the Referees Committee's own published rulings."
+>
+  <div class="wrap">
+    <header class="head grid">
+      <!-- TODO(moaz): rewrite the title and lead in your own voice. -->
+      <h1>Sofara: an incident library for Egyptian refereeing</h1>
+      <p class="lead col-text">
+        Sofara organises 45 incidents from 51 Egyptian Premier League 2026/27 matches into a searchable Arabic
+        library. Each verdict comes from the Referees Committee's own published post-round rulings. Built as a
+        proposal for the EFA Referees Committee; submitted in Oct 2026.
+      </p>
+      <ul class="links col-wide">
+        <li><a href="https://moazreda.github.io/sofara/">Live demo</a></li>
+        <li><a href="https://github.com/MoazReda/sofara">Code</a></li>
+      </ul>
+    </header>
+
+    <section class="section grid" aria-labelledby="gt">
+      <div class="col-text">
+        <h2 id="gt">Ground truth is the hard part</h2>
+        <p>
+          Public data cannot say whether a refereeing decision was correct. The only correct or incorrect labels are
+          the Committee's own post-round videos, so I store the call and the card as two separate verdicts, and the
+          tool never judges a decision itself. 20 of the 45 incidents have an official ruling.
+        </p>
+        <p>
+          Of those 20, the Committee called the on-field decision correct in 16 and incorrect in 4, and judged the
+          card correct in 17 and incorrect in 3. The VAR changed the decision in 4 incidents. 33 incidents link to
+          the source video.
+        </p>
+      </div>
+      <figure class="col-wide rounds" aria-label="Incidents per round, and how many have an official ruling">
+        <figcaption>Incidents per round, and how many have an official ruling (round 6 is one match, the derby).</figcaption>
+        <ul>
+          {rounds.map(([r, n, k]) => (
+            <li>
+              <span class="rl">Round {r}</span>
+              <span class="bar"><i class="all" style={`width:${(n / maxInc) * 100}%`}></i><i class="ruled" style={`width:${(k / maxInc) * 100}%`}></i></span>
+              <span class="rn">{k} of {n}</span>
+            </li>
+          ))}
+        </ul>
+      </figure>
+    </section>
+
+    <section class="section grid" aria-labelledby="rej">
+      <div class="col-text">
+        <h2 id="rej">What I rejected before writing code</h2>
+        <p>
+          <strong>Synthetic referees.</strong> Planting “hidden skills” in fake referees makes any validation circular.
+          Synthetic data appears only in labelled mock-ups.
+        </p>
+        <p>
+          <strong>A second-hand referee table.</strong> A betting site's table had duplicate names from
+          transliteration, totals that did not equal yellow plus red, a negative red-card value, many referees with 1
+          to 3 matches, and foreign referees mixed in.
+        </p>
+        <p>
+          <strong>Per-referee card rates.</strong> Referees given derbies and big matches show more cards, and public
+          data cannot control for match difficulty, so these rates would mislead.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="data">
+      <div class="col-text">
+        <h2 id="data">Data and pipeline</h2>
+        <p>
+          Version-controlled CSVs go through strict loaders: a bad row fails the whole build and lists every problem.
+          The result is a SQLite database where integrity is enforced in SQL, with CHECK, FOREIGN KEY and UNIQUE
+          constraints and four triggers, not only in Python.
+        </p>
+        <p>
+          It holds 109 officials, each with one ID. Names are never guessed, and every alias is recorded with its
+          evidence. It also holds 52 expert opinions from 14 named sources, 11 of them independent experts with 47 opinions, published by 15
+          outlets. Each opinion is summarised in my own words and links to where it was said.
+        </p>
+      </div>
+      <p class="col-note">51 matches, 45 incidents, 109 officials, 52 opinions.</p>
+    </section>
+
+    <section class="section grid" aria-labelledby="stats">
+      <div class="col-text">
+        <h2 id="stats">Statistics that refuse to overclaim</h2>
+        <p>
+          Each disputed case gets a disagreement score (2 × minority ÷ opinions) and a Wilson 95% interval for the share
+          who back the decision. An expert's agreement rate with the Committee appears only after 10 ruled cases. Fewer
+          than 3 independent opinions is labelled “small sample”, with no verdict.
+        </p>
+        <p>The wording is always “agreement with the Committee”, never “accuracy”.</p>
+        <p>
+          Only 5 cases have two or more independent opinions, and the experts split in 4 of them. With a sample that
+          small, the interval is the honest part of the output.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="search">
+      <div class="col-text">
+        <h2 id="search">Arabic search</h2>
+        <p>
+          The search is rule-based, not machine learning. It normalises Arabic spelling, matches whole words through
+          common prefixes and suffixes, and maps 84 colloquial terms to structured fields. Every result says why it
+          matched.
+        </p>
+        <p>
+          The search is built never to miss a case: a test fails if any expected incident is absent, and it runs on a
+          19-query gold set that I wrote myself, so it is a guard, not an independent score. Precision is reported for
+          context only. The weakest query, “الكرة بيده”, returns many other handball cases (precision 0.125 at worst),
+          and some of those extra hits may be relevant. A parity test checks that the page's JavaScript search returns
+          the same cases as the Python search on all 19.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="eng">
+      <div class="col-text">
+        <h2 id="eng">Engineering</h2>
+        <p>
+          The core package uses only the Python standard library. 157 tests run in CI on Ubuntu and Windows with Python
+          3.10 and 3.13, and the site deploys to GitHub Pages after every green run. 18 architecture decision records
+          explain the choices above.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="limits">
+      <div class="col-text">
+        <h2 id="limits">Limits and next step</h2>
+        <p>
+          There is no trained model in Sofara. It is data engineering, statistics and search, and 45 incidents is a
+          small sample. Next I plan to add semantic search with Arabic sentence embeddings and score it with Recall@k
+          on the existing 19-query set.
+        </p>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .head {
+    padding-top: 40px;
+    row-gap: 24px;
+  }
+  .head h1 {
+    grid-column: 1 / span 10;
+    font-size: clamp(36px, 6.5vw, 64px);
+    line-height: 1.02;
+    max-width: 18ch;
+  }
+  .lead {
+    font-size: 20px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .rounds figcaption {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+  .rounds ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+    max-width: 640px;
+  }
+  .rounds li {
+    display: grid;
+    grid-template-columns: 76px 1fr 64px;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+  }
+  .rl, .rn { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .bar { position: relative; height: 12px; background: var(--panel); }
+  .bar i { position: absolute; inset-block: 0; inset-inline-start: 0; display: block; }
+  .bar .all { background: var(--rule); }
+  .bar .ruled { background: var(--teal, #5FC9CF); }
+  @media (max-width: 860px) {
+    .head h1 {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

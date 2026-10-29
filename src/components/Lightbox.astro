@@ -1,0 +1,85 @@
+---
+/**
+ * Lightbox: one <dialog> for every certificate image. Any element with
+ * data-open="key" opens it. Keys come from src/data/certs.ts.
+ */
+import { certs } from '../data/certs';
+---
+
+<dialog id="cert-dialog" aria-label="Certificate">
+  <form method="dialog"><button class="close" aria-label="Close">Close</button></form>
+  <img id="cert-img" alt="" />
+  <p id="cert-cap"></p>
+  <p id="cert-link"></p>
+</dialog>
+
+<script is:inline define:vars={{ certs }}>
+  (function () {
+    var d = document.getElementById('cert-dialog');
+    if (!d || !d.showModal) return;
+    var img = document.getElementById('cert-img');
+    var cap = document.getElementById('cert-cap');
+    var link = document.getElementById('cert-link');
+    var last = null;
+    function open(key, from) {
+      var c = certs.find(function (x) { return x.key === key; });
+      if (!c) return;
+      last = from;
+      img.src = '/img/' + c.key + '.jpg';
+      img.alt = c.title + ', ' + c.issuer;
+      cap.textContent = c.title + ' · ' + c.issuer + ' · ' + c.date;
+      link.innerHTML = '';
+      if (c.verify) {
+        var a = document.createElement('a');
+        a.href = c.verify; a.textContent = 'Verify on Coursera'; a.rel = 'noopener';
+        link.appendChild(a);
+      }
+      d.showModal();
+    }
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest && e.target.closest('[data-open]');
+      if (t) { e.preventDefault(); open(t.getAttribute('data-open'), t); return; }
+      if (e.target === d) d.close();
+    });
+    d.addEventListener('close', function () { if (last) last.focus(); });
+  })();
+</script>
+
+<style>
+  dialog {
+    padding: 16px;
+    max-width: min(94vw, 1100px);
+    max-height: 94vh;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    overflow: auto;
+  }
+  dialog::backdrop {
+    background: rgba(5, 6, 7, 0.82);
+  }
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 74vh;
+    margin: 0 auto;
+    background: #fff;
+  }
+  p {
+    margin: 12px 0 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .close {
+    position: absolute;
+    top: 10px;
+    inset-inline-end: 10px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: 4px 12px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .close:hover { border-color: var(--teal); }
+</style>

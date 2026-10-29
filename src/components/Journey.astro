@@ -1,0 +1,134 @@
+---
+/**
+ * Journey: Oct 2022 to now on one time axis, three lanes. Bars grow in when the
+ * strip enters view. Click a bar to open its certificate or its project page.
+ * Every bar's dates come from a certificate. Projects are not drawn because
+ * their start dates are not documented.
+ */
+const start = Date.UTC(2022, 9, 1);
+const end = Date.UTC(2026, 10, 1);
+const pos = (y: number, m: number, d = 1) => ((Date.UTC(y, m - 1, d) - start) / (end - start)) * 100;
+interface Bar { label: string; sub: string; a: number; b: number; open?: string; href?: string; tone?: 'teal' | 'coral' | 'ink' }
+const lanes: { name: string; bars: Bar[] }[] = [
+  {
+    name: 'Study',
+    bars: [
+      { label: 'B.Sc. Computer Science', sub: 'Nile University, Oct 2022 to 2026, high honors', a: pos(2022, 10), b: pos(2026, 7), open: 'nu-diploma', tone: 'teal' },
+    ],
+  },
+  {
+    name: 'Learning',
+    bars: [
+      { label: 'AI training', sub: 'Zewail City, 50 hours, Aug 2023', a: pos(2023, 8), b: pos(2023, 9), open: 'zewail-ai', tone: 'ink' },
+      { label: 'ECPC', sub: 'Programming contest, 21 Oct 2024', a: pos(2024, 10, 21), b: pos(2024, 10, 28), open: 'ecpc-2024', tone: 'ink' },
+      { label: 'NLP specialization', sub: 'DeepLearning.AI, Nov 2025 to Jan 2026', a: pos(2025, 11, 21), b: pos(2026, 1, 2), open: 'dl-nlp-1', tone: 'ink' },
+    ],
+  },
+  {
+    name: 'Work',
+    bars: [
+      { label: 'Junior TA', sub: 'Nile University, Fall 2023', a: pos(2023, 9), b: pos(2023, 12, 25), open: 'nu-jta', tone: 'coral' },
+      { label: 'ML intern', sub: 'EFG Holding, 16 Feb to 20 Mar 2025', a: pos(2025, 2, 16), b: pos(2025, 3, 20), open: 'efg-internship', tone: 'coral' },
+    ],
+  },
+];
+const years = [2023, 2024, 2025, 2026];
+---
+
+<div class="journey" data-journey>
+  <div class="scroller">
+    <div class="axis" aria-hidden="true">
+      {years.map((y) => <span style={`left:${pos(y, 1)}%`}>{y}</span>)}
+    </div>
+    {lanes.map((l) => (
+      <div class="lane">
+        <span class="ln">{l.name}</span>
+        <div class="track">
+          {l.bars.map((b) => {
+            const w = Math.max(b.b - b.a, 1.6);
+            return b.href ? (
+              <a class={`bar ${b.tone}`} style={`left:${b.a}%;width:${w}%`} href={b.href} aria-label={`${b.label}: ${b.sub}`}>
+                <span class="tip"><b>{b.label}</b>{b.sub}</span><i>{b.label}</i>
+              </a>
+            ) : (
+              <button type="button" class={`bar ${b.tone}`} style={`left:${b.a}%;width:${w}%`} data-open={b.open} aria-label={`${b.label}: ${b.sub}. Open certificate`}>
+                <span class="tip"><b>{b.label}</b>{b.sub}</span><i>{b.label}</i>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ))}
+  </div>
+  <p class="hint">Hover a bar for details. Click one to open its certificate or project page.</p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-journey]').forEach((root) => {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    root.classList.add('armed');
+    new IntersectionObserver((es, io) => {
+      if (es[0].isIntersecting) {
+        root.classList.add('in');
+        io.disconnect();
+      }
+    }, { threshold: 0.25 }).observe(root);
+  });
+</script>
+
+<style>
+  .journey { margin: 8px 0 40px; }
+  .scroller { overflow-x: auto; padding: 34px 4px 70px; }
+  .scroller > * { min-width: 720px; }
+  .axis { position: relative; height: 22px; margin-inline-start: 92px; border-bottom: 1px solid var(--rule); }
+  .axis span { position: absolute; bottom: 2px; font-size: 13px; color: var(--ink-soft); transform: translateX(-2px); }
+  .axis span::after { content: ''; position: absolute; left: 2px; top: 20px; height: 8px; border-left: 1px solid var(--rule); }
+  .lane { display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid var(--rule); }
+  .ln { flex: none; width: 92px; font-size: 14px; color: var(--ink-soft); }
+  .track { position: relative; flex: 1; height: 34px; }
+  .bar {
+    position: absolute;
+    top: 3px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    background: var(--rule);
+    color: #0d0f10;
+    transform-origin: left;
+    transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), filter 0.2s;
+  }
+  .bar.teal { background: var(--teal); }
+  .bar.coral { background: var(--raspberry); }
+  .bar.ink { background: var(--ink-soft); }
+  .bar i { font-style: normal; font-size: 12px; font-weight: 600; white-space: nowrap; position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); color: var(--ink); }
+  .bar:hover, .bar:focus-visible { filter: brightness(1.15); z-index: 3; }
+  .tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    min-width: 200px;
+    padding: 8px 12px;
+    background: var(--panel);
+    border: 1px solid var(--teal);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: start;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .tip b { display: block; }
+  .bar:hover .tip, .bar:focus-visible .tip { opacity: 1; }
+  .armed .bar { transform: scaleX(0); }
+  .armed.in .bar { transform: none; }
+  .armed.in .lane:nth-child(3) .bar { transition-delay: 0.15s; }
+  .armed.in .lane:nth-child(4) .bar { transition-delay: 0.3s; }
+  .armed.in .lane:nth-child(5) .bar { transition-delay: 0.45s; }
+  .hint { color: var(--ink-soft); font-size: 14px; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .bar { transition: none; } }
+</style>

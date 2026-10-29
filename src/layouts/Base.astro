@@ -1,0 +1,105 @@
+---
+import '../styles/global.css';
+import Icon from '../components/Icon.astro';
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+const path = Astro.url.pathname;
+const nav = [
+  { href: '/#about', label: 'About', id: 'about' },
+  {
+    href: '/#projects',
+    label: 'Projects',
+    id: 'projects',
+    sub: [
+      { href: '/projects/franco/', label: 'Franco' },
+      { href: '/projects/sofara/', label: 'Sofara' },
+      { href: '/projects/tourasna/', label: 'Tourasna' },
+      { href: '/projects/code-quality/', label: 'Code quality' },
+    ],
+  },
+  { href: '/#experience', label: 'Experience', id: 'experience' },
+  { href: '/#education', label: 'Education', id: 'education' },
+  { href: '/#certificates', label: 'Certificates', id: 'certificates' },
+  { href: '/cv/', label: 'CV', id: 'cv' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0d0f10" />
+    <link rel="canonical" href={new URL(path, Astro.site)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="/">Moaz Elkhashab</a>
+        <nav aria-label="Main">
+          <ul>
+            {nav.map((n) => (
+              <li class:list={{ has: !!n.sub }}>
+                <a href={n.href} data-spy={n.id} aria-current={path === n.href || (n.id === 'cv' && path === '/cv/') ? 'page' : undefined}>{n.label}</a>
+                {n.sub && (
+                  <ul class="sub">
+                    {n.sub.map((s) => (
+                      <li><a href={s.href} aria-current={path === s.href ? 'page' : undefined}>{s.label}</a></li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap">
+        <ul class="social">
+          <li><a href="mailto:moelkhshab@gmail.com" aria-label="Email" title="moelkhshab@gmail.com"><Icon name="mail" size={22} /></a></li>
+          <li><a href="https://github.com/MoazReda" aria-label="GitHub" title="GitHub"><Icon name="github" size={22} /></a></li>
+          <li><a href="https://www.linkedin.com/in/moaz-elkhashab/" aria-label="LinkedIn" title="LinkedIn"><Icon name="linkedin" size={22} /></a></li>
+          <li><a href="https://www.kaggle.com/moazelkhashab" aria-label="Kaggle" title="Kaggle"><Icon name="kaggle" size={22} /></a></li>
+        </ul>
+        <p>
+          The Franco model was trained on data licensed CC-BY-NC, so it is for non-commercial use.
+          All example sentences on this site are written by hand; none come from private messages.
+        </p>
+      </div>
+    </footer>
+    <script>
+      // Scroll-spy: underline the nav item for the home-page section in view.
+      const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-spy]')];
+      if (location.pathname === '/') {
+        const map = new Map<Element, HTMLAnchorElement>();
+        links.forEach((l) => {
+          const el = document.getElementById(l.dataset.spy!);
+          if (el) map.set(el, l);
+        });
+        const io = new IntersectionObserver(
+          (es) => {
+            es.forEach((e) => {
+              if (e.isIntersecting) {
+                links.forEach((l) => l.removeAttribute('data-here'));
+                map.get(e.target)?.setAttribute('data-here', '');
+              }
+            });
+          },
+          { rootMargin: '-35% 0px -55% 0px' },
+        );
+        map.forEach((_, el) => io.observe(el));
+      }
+    </script>
+  </body>
+</html>

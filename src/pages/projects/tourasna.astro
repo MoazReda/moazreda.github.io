@@ -1,0 +1,165 @@
+---
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import Base from '../../layouts/Base.astro';
+
+// Drop a screen recording at public/tourasna-demo.mp4 (and optionally public/tourasna-demo.jpg as the poster)
+// and the video block appears on the next build.
+const hasVideo = existsSync(join(process.cwd(), 'public', 'tourasna-demo.mp4'));
+const hasPoster = existsSync(join(process.cwd(), 'public', 'tourasna-demo.jpg'));
+
+const numbers = [
+  ['Detector', 'YOLOv8m, 767 Gardiner sign classes', 'mAP@50 0.019 on validation (best epoch 40 of 50)'],
+  ['Translator', 'Transformer seq2seq, 11.8M parameters, from scratch', 'BLEU 7.76 on validation'],
+  ['Reading order', 'Rule-based quadrat sorter', 'Direction chosen by the user (automatic detection reached about 62%, so I dropped it)'],
+];
+---
+
+<Base
+  title="Tourasna hieroglyph translator | Moaz Elkhashab"
+  description="A four-layer photo-to-translation pipeline for Egyptian hieroglyphs: YOLOv8 detection, reading-order sorting, and a fallback chain that always returns something honest."
+>
+  <div class="wrap">
+    <header class="head grid">
+      <!-- TODO(moaz): rewrite the title and lead in your own voice. -->
+      <h1>Tourasna: a hieroglyph translator that says when it does not know</h1>
+      <p class="lead col-text">
+        A tourist uploads a photo of an inscription. My service detects the signs, puts them in reading order, and
+        returns an English and Arabic translation with the layer that produced it. It is one feature of Tourasna, our
+        graduation project, where I was team leader of 6. I built this whole service.
+      </p>
+      <ul class="links col-wide">
+        <li><a href="https://github.com/Tourasna/Tourasna">Code (the service is in ai-service/hieroglyphics-api)</a></li>
+      </ul>
+    </header>
+
+    {hasVideo && (
+      <section class="section grid" aria-labelledby="vid">
+        <div class="col-wide">
+          <h2 id="vid">The app, running</h2>
+          <video controls preload="metadata" playsinline poster={hasPoster ? '/tourasna-demo.jpg' : undefined}>
+            <source src="/tourasna-demo.mp4" type="video/mp4" />
+          </video>
+          <p class="vcap">Screen recording from the Tourasna app.</p>
+        </div>
+      </section>
+    )}
+
+    <section class="section grid" aria-labelledby="pipe">
+      <div class="col-text">
+        <h2 id="pipe">The pipeline</h2>
+        <p>
+          <strong>1. Detection.</strong> YOLOv8m, fine-tuned on a Kaggle T4, finds each sign and its Gardiner code,
+          keeping detections above 0.40 confidence.
+        </p>
+        <p>
+          <strong>2. Reading order.</strong> A rule-based algorithm groups overlapping glyphs into quadrats, the
+          vertical stacks that hieroglyphic text uses, and sorts them right-to-left, left-to-right or top-to-bottom.
+        </p>
+        <p>
+          <strong>3. Translation, four layers, first hit wins.</strong> A hand-curated table of 32 phrases (royal
+          names and common formulas). Then an LLM (Llama 3.3 70B through Groq) that returns a confidence and is told to
+          answer “unknown” rather than guess. Then my own transformer, which needs no internet. Last, the meaning of
+          each single sign, so the service always returns something.
+        </p>
+      </div>
+      <p class="col-note">The response also carries a transliteration, historical context, and which layer answered.</p>
+    </section>
+
+    <section class="section grid" aria-labelledby="num">
+      <div class="col-wide">
+        <h2 id="num">The numbers, as they are</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Part</th><th scope="col">What it is</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+              {numbers.map(([a, b, c]) => <tr><td>{a}</td><td>{b}</td><td>{c}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+        <p class="meta">
+          The detector's mAP is low. With 767 visually close classes, a right glyph family with the wrong variant counts
+          as a miss, and on tourist photos the mean confidence is 0.63 to 0.69. Confidence is not accuracy, and I did not
+          measure end-to-end accuracy on photos.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="data">
+      <div class="col-text">
+        <h2 id="data">Data, and the bug I found in it</h2>
+        <p>
+          The detector trains on 32,362 images with 537,682 annotations (27,937 train, 3,460 validation, 965 test). In
+          that dataset 48,549 annotation lines had class IDs above 766, outside the 767 classes. I removed only those
+          lines and kept every valid one.
+        </p>
+        <p>
+          The translator trains on the BBAW Egyptian corpus: 35,497 usable rows, 34,278 clean pairs after filtering
+          (29,136 train, 3,427 validation, 1,715 test). The corpus is mostly German, so I machine-translated it to
+          English with Google Translate. The English targets are therefore machine output, and that caps what the model
+          can learn.
+        </p>
+        <p>
+          I also trained a sign classifier (EfficientNetB0, 98.4% test accuracy on 117 classes) and removed it from the
+          pipeline, because the detector already returns classes.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="eng">
+      <div class="col-text">
+        <h2 id="eng">Service and honesty by design</h2>
+        <p>
+          A FastAPI service with 7 endpoints and 40 integration tests. A correction endpoint lets the user fix detected
+          codes before translating, which is the answer to blurry or eroded inscriptions. Given invented codes, the LLM
+          layer returns “unknown” with low confidence instead of a made-up translation.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="limits">
+      <div class="col-text">
+        <h2 id="limits">Limits</h2>
+        <p>
+          The reading direction is chosen by the user. The LLM layer needs internet, while the transformer and the
+          per-sign layer work offline. The curated table has only 32 phrases, so most real inscriptions rely on the
+          LLM. There is no hosted demo, because the detector needs a GPU server and deployment belonged to the backend
+          team.
+        </p>
+        <p>
+          Beyond this service I also built the 3D monument viewer, the interactive map and the audio storytelling. For
+          the AI Lens (monument recognition) I collected the data and made the annotations; a teammate did most of the
+          modelling. The rest of the team built the Flutter app, the NestJS backend, the AWS deployment, the
+          recommender and the FAHMY chatbot.
+        </p>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .head {
+    padding-top: 40px;
+    row-gap: 24px;
+  }
+  .head h1 {
+    grid-column: 1 / span 10;
+    font-size: clamp(36px, 6.5vw, 64px);
+    line-height: 1.02;
+    max-width: 18ch;
+  }
+  .lead {
+    font-size: 20px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: start; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--ink-soft); font-weight: 600; }
+  video { width: auto; max-width: 100%; max-height: 80vh; display: block; border: 1px solid var(--rule); background: var(--panel); }
+  .vcap { color: var(--ink-soft); font-size: 14px; margin-top: 10px; }
+  @media (max-width: 860px) {
+    .head h1 { grid-column: 1 / -1; }
+  }
+</style>

@@ -1,0 +1,156 @@
+---
+/**
+ * ErrorDescent: scroll-pinned bar chart (see design.md, Motion #2).
+ * The chart is sticky; each step of the story draws the next bar.
+ * Data is the Franco results table, 445-message test set.
+ */
+const versions = [
+  { label: 'Rules', cer: 0.399, step: 'I wrote a rule-based transliterator. Every rule I fixed broke another word.' },
+  { label: 'Seq2seq, 1M pairs', cer: 0.259, step: 'A small character-level model learned the context the rules could not.' },
+  { label: '+ spelling variants', cer: 0.247, step: 'The corpus spelled every word one way. Adding the way people really vary it helped, though validation loss got worse.' },
+  { label: 'ByT5, 300M', cer: 0.299, step: 'A model 175 times bigger did worse. It rewrote foreign text and looped on stretched words.' },
+  { label: '+ 1% real chat', cer: 0.223, step: 'About 1% hand-translated real messages beat all of it.' },
+];
+const max = 0.4;
+---
+
+<section class="descent" aria-labelledby="descent-h" data-descent>
+  <div class="wrap grid">
+    <h2 id="descent-h" class="col-wide">How the error fell</h2>
+    <ol class="steps col-text">
+      {versions.map((v, i) => (
+        <li data-i={i}>
+          <p class="n">{v.label}: <strong>{v.cer.toFixed(3)}</strong></p>
+          <p>{v.step}</p>
+        </li>
+      ))}
+    </ol>
+    <figure class="chart" aria-label="Character error rate by model version, lower is better">
+      <svg viewBox="0 0 420 260" role="img" aria-hidden="true">
+        {versions.map((v, i) => (
+          <g class="row" data-i={i} transform={`translate(0 ${i * 50 + 6})`}>
+            <text x="0" y="12" class="lbl">{v.label}</text>
+            <rect x="0" y="20" width={Math.round((v.cer / max) * 360)} height="16" class="bar" />
+            <text x={Math.round((v.cer / max) * 360) + 8} y="33" class="val">{v.cer.toFixed(3)}</text>
+          </g>
+        ))}
+      </svg>
+      <figcaption>Character error rate on 445 real messages. Lower is better.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-descent]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wide = window.matchMedia('(min-width: 861px)').matches;
+  if (root && wide && !reduce && 'IntersectionObserver' in window) {
+    root.classList.add('js');
+    const rows = root.querySelectorAll<SVGGElement>('.row');
+    const show = (n: number) => rows.forEach((r, i) => r.classList.toggle('on', i <= n));
+    show(-1);
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) show(Number((e.target as HTMLElement).dataset.i));
+        });
+      },
+      { rootMargin: '-45% 0px -45% 0px' },
+    );
+    root.querySelectorAll('.steps li').forEach((li) => io.observe(li));
+  }
+</script>
+
+<style>
+  .descent {
+    padding-top: 56px;
+    margin-top: 56px;
+    border-top: 1px solid var(--rule);
+  }
+  .descent h2 {
+    margin-bottom: 14px;
+  }
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    grid-column: 1 / span 6;
+  }
+  .steps li {
+    padding: 0 0 32px;
+  }
+  .steps p {
+    margin: 0 0 6px;
+  }
+  .n {
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .n strong {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .chart {
+    grid-column: 8 / span 5;
+    margin: 0;
+    align-self: start;
+    position: sticky;
+    top: 88px;
+  }
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .lbl {
+    font: 600 13px var(--font-body);
+    fill: var(--ink);
+  }
+  .val {
+    font: 600 13px var(--font-body);
+    fill: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .bar {
+    fill: var(--ink);
+  }
+  .js .row {
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .js .row .bar {
+    transform: scaleX(0);
+    transform-box: fill-box;
+    transform-origin: left;
+    transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .js .row.on {
+    opacity: 1;
+  }
+  .js .row.on .bar {
+    transform: scaleX(1);
+  }
+  figcaption {
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  @media (min-width: 861px) {
+    .js .steps li {
+      min-height: 46vh;
+    }
+    .js .steps li:last-child {
+      min-height: 0;
+    }
+  }
+  @media (max-width: 860px) {
+    .steps,
+    .chart {
+      grid-column: 1 / -1;
+    }
+    .chart {
+      position: static;
+      margin-top: 8px;
+    }
+  }
+</style>

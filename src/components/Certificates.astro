@@ -1,0 +1,71 @@
+---
+/** Certificates: thumbnails that lift on hover and open in the lightbox. */
+import { certs } from '../data/certs';
+const shown = certs.filter((c) => c.key !== 'nu-diploma');
+---
+
+<ul class="cgrid">
+  {shown.map((c) => (
+    <li>
+      <button type="button" data-open={c.key} aria-label={`Open certificate: ${c.title}`}>
+        <span class="thumb"><img src={`/img/${c.key}.jpg`} alt="" loading="lazy" /></span>
+        <span class="t">{c.title}</span>
+        <span class="m">{c.issuer} &middot; {c.date}</span>
+      </button>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .cgrid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  button {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    text-align: start;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--ink);
+    cursor: zoom-in;
+  }
+  .thumb {
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--rule);
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.2s;
+  }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+  }
+  .t {
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .m {
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  button:hover .thumb,
+  button:focus-visible .thumb {
+    transform: translateY(-6px);
+    border-color: var(--teal);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .thumb { transition: none; }
+  }
+</style>

@@ -1,0 +1,134 @@
+---
+import Base from '../../layouts/Base.astro';
+
+// Accuracy on the 20% stratified test split (random_state 42), from the project notebooks.
+// Majority class ("high") is 9,872 of 15,929 rows = 62.0%.
+const base = 62.0;
+const models = [
+  { name: 'Logistic regression', acc: 65.03 },
+  { name: 'Neural network', acc: 73.85 },
+  { name: 'XGBoost', acc: 74.61 },
+  { name: 'Random forest (tuned)', acc: 77.15, best: true },
+];
+---
+
+<Base
+  title="Code quality assessor | Moaz Elkhashab"
+  description="A course project that predicts a pylint-based quality label for Python functions from 18 structural features, with the 62% majority baseline stated next to every accuracy."
+>
+  <div class="wrap">
+    <header class="head grid">
+      <!-- TODO(moaz): rewrite the title and lead in your own voice, and say which parts you did. -->
+      <h1>Code quality assessor: 77% accuracy, and what it is worth</h1>
+      <p class="lead col-text">
+        For a machine learning course (CSCI417, Nile University, spring 2025) our team of five scraped Python functions
+        from public GitHub repositories, labelled each with pylint, and trained classifiers to predict the label from
+        18 structural features. The best model reaches 77.2% accuracy. Always predicting the most common class reaches
+        62.0%, so the real gain is 15 points.
+      </p>
+      <!-- TODO(moaz): add the repo link here once it is public. -->
+    </header>
+
+    <section class="section grid" aria-labelledby="res">
+      <div class="col-wide">
+        <h2 id="res">Results, with the baseline</h2>
+        <ul class="bars" aria-label="Test accuracy by model, with the majority-class baseline at 62.0 percent">
+          {models.map((m) => (
+            <li>
+              <span class="n">{m.name}</span>
+              <span class="track"><i class:list={{ best: m.best }} style={`width:${m.acc}%`}></i><b style={`inset-inline-start:${base}%`}></b></span>
+              <span class="v">{(m.acc + 0.001).toFixed(1)}%</span>
+            </li>
+          ))}
+        </ul>
+        <p class="meta">
+          The thin line is the baseline: 62.0%, from always predicting the high-quality class. I report accuracy only,
+          with no per-class scores, so I cannot say how well the rare low and mid classes are found.
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="data">
+      <div class="col-text">
+        <h2 id="data">Data and label</h2>
+        <p>
+          The GitHub API gave function source from five public repositories of exercises and algorithms. Each function
+          got 18 features with the ast module and radon: size, arguments, returns, calls, cyclomatic complexity,
+          Halstead difficulty and bugs, docstring and comment counts, naming checks and return length. Stubs were dropped
+          (under 3 lines, or complexity 1).
+        </p>
+        <p>
+          The label comes from pylint, run on each function alone with the convention, refactor and warning checks
+          switched off, so only errors count against the 0 to 10 score. Up to 5 is low, up to 7 mid, above 7 high. After
+          removing 837 duplicates the table had 15,929 functions: 4,163 low, 1,894 mid and 9,872 high, of which 8,312
+          scored exactly 10.
+        </p>
+      </div>
+      <p class="col-note">Split: 80/20, stratified, random_state 42.</p>
+    </section>
+
+    <section class="section grid" aria-labelledby="models">
+      <div class="col-text">
+        <h2 id="models">Models</h2>
+        <p>
+          Logistic regression on scaled features; XGBoost with defaults; a five-hidden-layer network (13,459
+          parameters, dropout, early stopping); and a random forest tuned over 36 settings with 3-fold cross-validation
+          (best: 200 trees, depth 30, 75.7% in validation, 77.2% on test).
+        </p>
+      </div>
+    </section>
+
+    <section class="section grid" aria-labelledby="limits">
+      <div class="col-text">
+        <h2 id="limits">What this does not show</h2>
+        <p>
+          <strong>The label measures pylint errors, not quality.</strong> With style checks off, a function scores 10 unless
+          pylint finds an error. Running it on one function alone also flags names defined elsewhere in the file.
+        </p>
+        <p>
+          <strong>The split is random across functions.</strong> Functions from the same repository land in both train and
+          test, and five educational repositories say little about code in general.
+        </p>
+        <p>
+          So the model predicts what pylint would say about a function of this kind, not how maintainable the code is.
+          A fair next test is to hold out whole repositories and report macro-F1.
+        </p>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .head {
+    padding-top: 40px;
+    row-gap: 24px;
+  }
+  .head h1 {
+    grid-column: 1 / span 10;
+    font-size: clamp(36px, 6.5vw, 64px);
+    line-height: 1.02;
+    max-width: 18ch;
+  }
+  .lead {
+    font-size: 20px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: start; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--ink-soft); font-weight: 600; }
+  .bars { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 8px; max-width: 640px; }
+  .bars li { display: grid; grid-template-columns: 150px 1fr 56px; gap: 12px; align-items: center; font-size: 14px; }
+  .bars .n { color: var(--ink-soft); }
+  .bars .v { font-variant-numeric: tabular-nums; text-align: end; color: var(--ink-soft); }
+  .track { position: relative; height: 12px; background: var(--panel); }
+  .track i { position: absolute; inset-block: 0; inset-inline-start: 0; background: var(--rule); }
+  .track i.best { background: var(--teal); }
+  .track b { position: absolute; inset-block: -3px; width: 2px; background: var(--ink); }
+  video { width: 100%; max-width: 860px; display: block; border: 1px solid var(--rule); background: var(--panel); }
+  .vcap { color: var(--ink-soft); font-size: 14px; margin-top: 10px; }
+  @media (max-width: 860px) {
+    .head h1 { grid-column: 1 / -1; }
+  }
+</style>

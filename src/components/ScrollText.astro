@@ -1,0 +1,69 @@
+---
+/**
+ * ScrollText: a large statement whose words light up as it crosses the
+ * screen (design.md, Motion #6). Mark emphasis with <em> in the slot HTML.
+ * Without JS or with reduced motion, every word is fully visible.
+ */
+---
+
+<p class="stext" data-stext><slot /></p>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll<HTMLElement>('[data-stext]').forEach((el) => {
+    if (reduce) return;
+    // Wrap every word, keeping <em> wrappers.
+    const wrap = (node: Node) => {
+      [...node.childNodes].forEach((c) => {
+        if (c.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          (c.textContent || '').split(/(\s+)/).forEach((w) => {
+            if (!w) return;
+            if (/^\s+$/.test(w)) return frag.append(w);
+            const s = document.createElement('span');
+            s.className = 'w';
+            s.textContent = w;
+            frag.append(s);
+          });
+          c.replaceWith(frag);
+        } else wrap(c);
+      });
+    };
+    wrap(el);
+    el.classList.add('on');
+    const words = [...el.querySelectorAll<HTMLElement>('.w')];
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const b = el.getBoundingClientRect();
+      const vh = innerHeight;
+      // 0 when the block's top enters the lower third, 1 when its bottom reaches the upper half.
+      const p = Math.min(1, Math.max(0, (vh * 0.85 - b.top) / (b.height + vh * 0.35)));
+      const k = p * (words.length + 4);
+      words.forEach((w, i) => w.style.setProperty('--o', String(Math.min(1, Math.max(0.16, (k - i) / 4)))));
+    };
+    const req = () => !ticking && ((ticking = true), requestAnimationFrame(update));
+    addEventListener('scroll', req, { passive: true });
+    addEventListener('resize', req);
+    update();
+  });
+</script>
+
+<style>
+  .stext {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: clamp(28px, 4.6vw, 60px);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0;
+    max-width: 22em;
+  }
+  .stext :global(em) {
+    font-style: normal;
+    color: var(--raspberry);
+  }
+  .stext.on :global(.w) {
+    opacity: var(--o, 0.16);
+  }
+</style>

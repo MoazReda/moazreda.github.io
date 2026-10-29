@@ -1,0 +1,211 @@
+---
+/**
+ * Lens: the hero (design.md, Motion #1). Two layers of the same giant type.
+ * The visible layer is the claim; a coral circle that follows the cursor
+ * reveals what I do about it, word for word underneath.
+ * Touch devices get a lens that drifts by itself. Reduced motion: no drift.
+ */
+import Portrait from './Portrait.astro';
+import Icon from './Icon.astro';
+const claim = ['I turn messy data', 'into models', 'I can defend.'];
+const proof = ['Baselines stated.', 'Limits written.', 'Numbers checked.'];
+---
+
+<section class="lens" data-lens aria-labelledby="top">
+  <div class="wrap intro">
+    <div class="who">
+      <p class="open"><span class="dot" aria-hidden="true"></span>Open to machine learning and data science roles &middot; Giza, Egypt</p>
+      <h1 id="top" class="display name">Moaz Elkhashab</h1>
+      <p class="id">
+        Computer Science graduate, Nile University.<br />
+        High honors, CGPA 3.69 / 4.00. Arabic NLP, computer vision and data work where the labels are hard to get.
+      </p>
+      <ul class="cta">
+        <li><a href="#projects">See the projects</a></li>
+        <li><a href="/cv/">CV</a></li>
+        <li><a class="ic" href="mailto:moelkhshab@gmail.com" aria-label="Email" title="Email"><Icon name="mail" /></a></li>
+        <li><a class="ic" href="https://github.com/MoazReda" aria-label="GitHub" title="GitHub"><Icon name="github" /></a></li>
+        <li><a class="ic" href="https://www.linkedin.com/in/moaz-elkhashab/" aria-label="LinkedIn" title="LinkedIn"><Icon name="linkedin" /></a></li>
+        <li><a class="ic" href="https://www.kaggle.com/moazelkhashab" aria-label="Kaggle" title="Kaggle"><Icon name="kaggle" /></a></li>
+      </ul>
+    </div>
+    <Portrait src="/moaz-casual.png" width={622} height={656} alt="Moaz Elkhashab" max={300} eager />
+  </div>
+
+  <div class="stage">
+    <p class="display layer a" aria-label={claim.join(' ')}>
+      {claim.map((l, i) => <span class="ln" aria-hidden="true">{i === 2 ? <em>{l}</em> : l}</span>)}
+    </p>
+    <p class="display layer b" aria-hidden="true">
+      {proof.map((l) => <span class="ln">{l}</span>)}
+    </p>
+  </div>
+  <p class="hint wrap">Move your cursor over the words.</p>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-lens]');
+  const stage = root?.querySelector<HTMLElement>('.stage');
+  if (root && stage) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = matchMedia('(pointer: coarse)').matches;
+    let x = -300, y = -300, r = 0, tx = x, ty = y, tr = 0, raf = 0, inside = false;
+    const draw = () => {
+      x += (tx - x) * 0.18;
+      y += (ty - y) * 0.18;
+      r += (tr - r) * 0.14;
+      stage.style.setProperty('--x', x + 'px');
+      stage.style.setProperty('--y', y + 'px');
+      stage.style.setProperty('--r', r + 'px');
+    };
+    const loop = (t: number) => {
+      if (coarse && !reduce && !inside) {
+        const b = stage.getBoundingClientRect();
+        tx = b.width * (0.5 + 0.28 * Math.sin(t / 1700));
+        ty = b.height * (0.5 + 0.3 * Math.sin(t / 1100 + 1));
+        tr = Math.min(b.width, 360) * 0.32;
+      }
+      draw();
+      raf = requestAnimationFrame(loop);
+    };
+    const R = () => Math.max(130, Math.min(stage.clientWidth * 0.26, 300));
+    stage.addEventListener('pointermove', (e) => {
+      const b = stage.getBoundingClientRect();
+      tx = e.clientX - b.left;
+      ty = e.clientY - b.top;
+      tr = R();
+      inside = true;
+    });
+    stage.addEventListener('pointerleave', () => {
+      tr = 0;
+      inside = false;
+    });
+    new IntersectionObserver((es) => {
+      cancelAnimationFrame(raf);
+      if (es[0].isIntersecting) raf = requestAnimationFrame(loop);
+    }).observe(stage);
+  }
+</script>
+
+<style>
+  .lens {
+    padding: 8px 0 8px;
+  }
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 40px;
+    align-items: end;
+    padding-top: 28px;
+  }
+  .open {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 20px;
+    border: 1px solid var(--rule);
+    padding: 8px 16px;
+    font-size: clamp(16px, 1.7vw, 22px);
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--panel);
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--teal);
+    flex: none;
+  }
+  .name {
+    margin: 0;
+    font-size: clamp(44px, 8.4vw, 112px);
+    line-height: 0.95;
+  }
+  .id {
+    margin: 20px 0 0;
+    max-width: 52ch;
+    font-size: clamp(17px, 1.6vw, 21px);
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .cta {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 24px 0 0;
+    padding: 0;
+  }
+  .cta a {
+    display: inline-block;
+    padding: 8px 18px;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .cta a.ic {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+  }
+  .cta a:hover,
+  .cta a:focus-visible {
+    background: var(--teal);
+    color: #0d0f10;
+    border-color: var(--teal);
+  }
+  .stage {
+    --x: -300px;
+    --y: -300px;
+    --r: 0px;
+    --fs: clamp(30px, 9vw, 136px);
+    position: relative;
+    overflow: hidden;
+    margin-top: 40px;
+    touch-action: pan-y;
+  }
+  .layer {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 1120px;
+    padding: 20px 20px 20px;
+    font-size: var(--fs);
+  }
+  .ln {
+    display: block;
+    white-space: nowrap;
+  }
+  .a em {
+    font-style: normal;
+    color: var(--teal);
+  }
+  .b {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    max-width: none;
+    padding-inline: max(20px, calc((100% - 1120px) / 2 + 20px));
+    background: var(--raspberry);
+    color: #0d0f10;
+    pointer-events: none;
+    clip-path: circle(var(--r) at var(--x) var(--y));
+  }
+  .hint {
+    margin-top: 12px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  @media (pointer: coarse) {
+    .hint { display: none; }
+  }
+  @media (max-width: 860px) {
+    .intro {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+  }
+</style>

@@ -1,0 +1,140 @@
+---
+import Base from "../layouts/Base.astro";
+import Lens from '../components/Lens.astro';
+import Portrait from '../components/Portrait.astro';
+import ProjectList from '../components/ProjectList.astro';
+import ScrollText from '../components/ScrollText.astro';
+import Certificates from '../components/Certificates.astro';
+import Lightbox from '../components/Lightbox.astro';
+import Journey from '../components/Journey.astro';
+import ToolMatrix from '../components/ToolMatrix.astro';
+---
+
+<Base
+  title="Moaz Elkhashab: machine learning and data science"
+  description="Moaz Elkhashab, Computer Science graduate (Nile University, high honors), open to machine learning and data science roles in Giza, Egypt. Projects: Franco translator, Sofara, Tourasna, code quality."
+>
+  <Lens />
+
+  <div class="wrap about" id="about">
+    <h2 class="sec">About</h2>
+    <div class="about-grid">
+      <div class="about-text">
+        <!-- TODO(moaz): About is your own text (long version), lightly corrected for accuracy. -->
+        <ScrollText>
+          I'm Moaz, a machine learning and data science engineer based in Giza, who likes taking ideas <em>all the way into people's hands</em>.
+        </ScrollText>
+        <div class="about-body">
+          <p>
+            My latest project started with a simple question: why can't any tool understand the way Egyptians actually
+            text? I built a Franco-Arabic translator from scratch, and the biggest lesson wasn't about model size. A
+            model 175 times bigger did worse, while adding just 1% of real chat messages to the training data made the
+            difference. Today that model runs fully offline on phones, through an app on Google Play.
+          </p>
+          <p>
+            That's how I like to work: start from the data, test what's real, and ship something people can use. Most
+            of my work is built around Arabic and the Egyptian context, from NLP to computer vision for hieroglyphs,
+            plus the data behind landmark recognition.
+          </p>
+          <p>
+            Outside of code, I shoot photos and edit videos. I also taught C++ to university students, which taught me
+            that a clear explanation matters as much as a good model.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ProjectList />
+
+  <div class="wrap">
+    <section class="section" id="experience" aria-labelledby="exp">
+      <h2 id="exp" class="sec">Experience</h2>
+      <Journey />
+      <div class="entries">
+        <article>
+          <h3>Machine Learning intern, EFG Holding</h3>
+          <p class="meta">Smart Village, Giza. 16 Feb to 20 Mar 2025</p>
+          <!-- NOTE: the certificate letter itself says "Information Technology division". Ask EFG HR for a corrected letter if possible. -->
+          <p>
+            Cleaned a real income-classification dataset: incomplete records, and outliers handled with the IQR rule
+            instead of z-scores because the data was not normal. Built the preprocessing pipeline, then compared
+            logistic regression, random forest and a neural network on precision, recall, F1 and ROC-AUC, since the
+            classes were imbalanced.
+          </p>
+          <button type="button" class="link" data-open="efg-internship">View the certificate</button>
+        </article>
+        <article>
+          <h3>Junior Teaching Assistant, Nile University</h3>
+          <p class="meta">School of Information Technology and Computer Science. Fall 2023</p>
+          <p>Taught C++ (OOP, pointers, data structures) and ran lab debugging sessions.</p>
+          <button type="button" class="link" data-open="nu-jta">View the certificate</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="education" aria-labelledby="edu">
+      <h2 id="edu" class="sec">Education</h2>
+      <div class="edu-grid">
+        <div>
+          <h3>B.Sc. Computer Science, Nile University</h3>
+          <p class="meta">Oct 2022 to 2026. High honors. CGPA 3.69 / 4.00. Degree conferred 12 Sep 2026.</p>
+          <p>School of Information Technology and Computer Science. Graduation project: Tourasna, as team leader.</p>
+          <button type="button" class="link" data-open="nu-diploma">View the diploma</button>
+          <h3 class="spaced">NLP Specialization, DeepLearning.AI</h3>
+          <p class="meta">Three of four courses completed, Nov 2025 to Jan 2026. Certificates below.</p>
+        </div>
+        <Portrait src="/moaz.png" width={408} height={572} alt="Moaz Elkhashab in his graduation gown holding his diploma" max={300} />
+      </div>
+    </section>
+
+    <section class="section" id="certificates" aria-labelledby="certs">
+      <h2 id="certs" class="sec">Certificates</h2>
+      <p class="sub">Click a certificate to enlarge it. The Coursera ones link to Coursera's own verification page.</p>
+      <Certificates />
+    </section>
+
+    <section class="section" id="tools" aria-labelledby="skills">
+      <h2 id="skills" class="sec">Tools</h2>
+      <p class="sub">A dot means the tool is part of that project. Click a project name to light up its tools.</p>
+      <ToolMatrix />
+    </section>
+  </div>
+
+  <Lightbox />
+</Base>
+
+<style>
+  .about { padding-top: 96px; scroll-margin-top: 64px; }
+  .sec { font-size: clamp(34px, 5vw, 56px); margin: 0 0 20px; }
+  .sub { color: var(--ink-soft); margin: 0 0 24px; }
+  .section { padding-top: 96px; scroll-margin-top: 64px; }
+  .entries { display: grid; gap: 36px; max-width: 70ch; }
+  .entries h3, .edu-grid h3 { margin: 0; font-size: 20px; }
+  .edu-grid h3.spaced { margin-top: 32px; }
+  .entries .meta, .edu-grid .meta { margin: 4px 0 10px; }
+  .edu-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 48px;
+    align-items: start;
+  }
+  .about-body { max-width: 62ch; margin-top: 32px; }
+  .about-body p { margin: 0 0 18px; font-size: 19px; line-height: 1.65; }
+  .tools { max-width: 70ch; }
+  .link {
+    font: inherit;
+    color: var(--teal);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  @media (max-width: 860px) {
+    .about { padding-top: 64px; }
+    .section { padding-top: 64px; }
+    .edu-grid { grid-template-columns: 1fr; }
+  }
+</style>

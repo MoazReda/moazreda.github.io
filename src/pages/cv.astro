@@ -1,0 +1,29 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="CV | Moaz Elkhashab" description="Moaz Elkhashab's CV: machine learning and data science.">
+  <div class="wrap page">
+    <h1 class="display">CV</h1>
+    <p class="actions">
+      <a class="btn" href="/Moaz_Elkhashab_CV.pdf" download>Download the PDF</a>
+    </p>
+    <!-- Shown as an image so download managers and PDF viewers cannot get in the way. -->
+    <img src="/img/cv.jpg" alt="Moaz Elkhashab's CV, one page" />
+  </div>
+</Base>
+
+<style>
+  .page { padding-top: 40px; }
+  h1 { font-size: clamp(44px, 8vw, 96px); margin: 0 0 16px; }
+  .actions { margin: 0 0 24px; }
+  .btn {
+    display: inline-block;
+    padding: 8px 18px;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .btn:hover, .btn:focus-visible { background: var(--teal); color: #0d0f10; border-color: var(--teal); }
+  img { display: block; width: 100%; max-width: 860px; background: #fff; border: 1px solid var(--rule); }
+</style>
