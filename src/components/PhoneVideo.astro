@@ -1,0 +1,126 @@
+---
+/**
+ * PhoneVideo: a screen recording inside a phone frame, with chapters.
+ * Plays muted when it scrolls into view (unless the visitor prefers reduced
+ * motion), pauses when it leaves, and each chapter button jumps to its moment.
+ * The progress bar is a real slider, so keyboard users can scrub too.
+ */
+interface Chapter { t: number; label: string; note: string }
+interface Props { src: string; poster: string; chapters?: Chapter[]; caption?: string; ratio?: string; label: string }
+const { src, poster, chapters = [], caption, ratio = '432 / 874', label } = Astro.props;
+---
+
+<figure class="pv" data-pv>
+  <div class="device" style={`--ratio:${ratio}`}>
+    <video muted playsinline loop preload="metadata" poster={poster} aria-label={label}>
+      <source src={src} type="video/mp4" />
+    </video>
+    <button type="button" class="toggle" data-toggle aria-label="Play or pause the recording">
+      <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path class="p" d="M8 5v14l11-7z" /><path class="q" d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
+    </button>
+  </div>
+  <div class="side">
+    <input type="range" class="scrub" min="0" max="1000" value="0" aria-label="Position in the recording" />
+    {chapters.length > 0 && (
+      <ol class="chapters">
+        {chapters.map((c, i) => (
+          <li>
+            <button type="button" data-t={c.t} data-i={i}>
+              <span class="n">{String(i + 1).padStart(2, '0')}</span>
+              <span class="tx"><b>{c.label}</b><i>{c.note}</i></span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    )}
+    {caption && <figcaption>{caption}</figcaption>}
+  </div>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-pv]').forEach((root) => {
+    const v = root.querySelector('video')!;
+    const scrub = root.querySelector<HTMLInputElement>('.scrub')!;
+    const btns = [...root.querySelectorAll<HTMLButtonElement>('.chapters button')];
+    const starts = btns.map((b) => Number(b.dataset.t));
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let userPaused = false;
+
+    const mark = () => {
+      root.classList.toggle('playing', !v.paused);
+      if (v.duration) scrub.value = String((v.currentTime / v.duration) * 1000);
+      let cur = -1;
+      starts.forEach((s, i) => { if (v.currentTime >= s - 0.05) cur = i; });
+      btns.forEach((b, i) => b.classList.toggle('on', i === cur));
+    };
+    v.addEventListener('timeupdate', mark);
+    v.addEventListener('play', mark);
+    v.addEventListener('pause', mark);
+    v.addEventListener('loadedmetadata', mark);
+
+    root.querySelector('[data-toggle]')!.addEventListener('click', () => {
+      if (v.paused) { userPaused = false; v.play(); } else { userPaused = true; v.pause(); }
+    });
+    scrub.addEventListener('input', () => { if (v.duration) v.currentTime = (Number(scrub.value) / 1000) * v.duration; });
+    btns.forEach((b) =>
+      b.addEventListener('click', () => {
+        v.currentTime = Number(b.dataset.t);
+        userPaused = false;
+        v.play();
+      }),
+    );
+
+    if (!calm) {
+      new IntersectionObserver((es) => {
+        const on = es[0].isIntersecting;
+        if (on && !userPaused) v.play().catch(() => {});
+        if (!on) v.pause();
+      }, { threshold: 0.55 }).observe(root);
+    }
+  });
+</script>
+
+<style>
+  .pv { margin: 0; display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 36px; align-items: center; }
+  .device {
+    position: relative;
+    aspect-ratio: var(--ratio);
+    padding: 10px;
+    border-radius: 38px;
+    background: #1a1d1f;
+    border: 1px solid #3a4144;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px #000;
+    overflow: hidden;
+  }
+  .device::before { content: ''; position: absolute; top: 14px; left: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #000; z-index: 2; }
+  video { width: 100%; height: 100%; object-fit: cover; border-radius: 28px; background: #000; display: block; }
+  .toggle {
+    position: absolute; inset: 0; width: 100%; background: none; border: 0; cursor: pointer; color: #fff;
+    display: grid; place-items: center; transition: opacity 0.2s;
+  }
+  .toggle svg { padding: 16px; border-radius: 50%; background: rgba(13, 15, 16, 0.72); fill: currentColor; box-sizing: content-box; }
+  .toggle .q { display: none; }
+  .playing .toggle { opacity: 0; }
+  .playing .toggle:hover, .playing .toggle:focus-visible { opacity: 1; }
+  .playing .toggle .p { display: none; }
+  .playing .toggle .q { display: inline; }
+  .scrub { width: 100%; accent-color: var(--teal); margin: 0 0 18px; }
+  .chapters { list-style: none; margin: 0; padding: 0; }
+  .chapters button {
+    display: flex; gap: 14px; width: 100%; text-align: start; align-items: baseline;
+    background: none; border: 0; border-top: 1px solid var(--rule); padding: 12px 6px; color: var(--ink-soft);
+    cursor: pointer; font: inherit; transition: color 0.2s, background 0.2s, padding 0.2s;
+  }
+  .chapters li:last-child button { border-bottom: 1px solid var(--rule); }
+  .chapters button:hover, .chapters button:focus-visible { background: var(--panel); color: var(--ink); }
+  .chapters button.on { color: var(--ink); padding-inline-start: 14px; box-shadow: inset 3px 0 0 var(--teal); }
+  .n { font-size: 13px; color: var(--teal); font-variant-numeric: tabular-nums; }
+  .tx b { display: block; font-size: 17px; font-weight: 600; }
+  .tx i { display: block; font-style: normal; font-size: 14px; line-height: 1.45; }
+  figcaption { margin-top: 14px; color: var(--ink-soft); font-size: 14px; }
+  @media (max-width: 700px) {
+    .pv { grid-template-columns: 1fr; justify-items: center; }
+    .device { width: min(260px, 70vw); }
+    .side { width: 100%; }
+  }
+</style>

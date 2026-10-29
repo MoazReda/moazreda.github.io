@@ -1,0 +1,60 @@
+---
+/**
+ * RouteFlow: how one trip runs in the interactive map, as eight linked steps.
+ * Hover or focus a step to read what it does. The steps are from my own slide
+ * for the project; nothing is added.
+ */
+const steps = [
+  ['Agenda', 'The day’s places, times and categories.'],
+  ['Choose a start', 'The current location, or search for any starting place.'],
+  ['Fetch the location', 'Geolocator reads where the traveller is.'],
+  ['Render the map', 'Google Maps Flutter SDK with numbered custom markers.'],
+  ['Build the route', 'Google Directions API returns distance, time and the path.'],
+  ['Start the trip', 'Hands over to Uber, Careem or Google Maps for navigation.'],
+  ['Proximity trigger', 'Within 100 m of a stop, the app notices.'],
+  ['Storytelling audio', 'Google Cloud TTS (Chirp 3 HD) tells the story of that place.'],
+];
+---
+
+<ol class="flow" data-flow>
+  {steps.map(([t, d], i) => (
+    <li style={`--i:${i}`}>
+      <button type="button" aria-describedby={`flow-d${i}`}>
+        <span class="n">{i + 1}</span>
+        <span class="t">{t}</span>
+      </button>
+      <p id={`flow-d${i}`}>{d}</p>
+    </li>
+  ))}
+</ol>
+
+<script>
+  // Light each step in turn once the list is in view, then leave it all lit.
+  document.querySelectorAll<HTMLElement>('[data-flow]').forEach((ol) => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    ol.classList.add('armed');
+    new IntersectionObserver((es, io) => {
+      if (es[0].isIntersecting) { ol.classList.add('in'); io.disconnect(); }
+    }, { threshold: 0.3 }).observe(ol);
+  });
+</script>
+
+<style>
+  .flow { list-style: none; margin: 0; padding: 0; position: relative; counter-reset: s; }
+  .flow::before { content: ''; position: absolute; left: 15px; top: 18px; bottom: 18px; width: 2px; background: var(--rule); }
+  .flow li { position: relative; padding: 4px 0; }
+  .flow button {
+    display: flex; align-items: center; gap: 16px; width: 100%; text-align: start; background: none; border: 0;
+    padding: 6px 0; color: var(--ink); font: inherit; font-size: 18px; font-weight: 600; cursor: pointer; position: relative;
+  }
+  .n {
+    flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--paper); border: 2px solid var(--teal); font-size: 14px; color: var(--teal); transition: background 0.2s, color 0.2s;
+  }
+  .flow p { margin: 0 0 0 48px; color: var(--ink-soft); font-size: 15px; line-height: 1.45; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s, opacity 0.25s; }
+  .flow li:hover p, .flow li:focus-within p { max-height: 5em; opacity: 1; margin-bottom: 6px; }
+  .flow li:hover .n, .flow button:focus-visible .n { background: var(--teal); color: #0d0f10; }
+  .armed li { opacity: 0.25; transform: translateX(-8px); transition: opacity 0.5s, transform 0.5s; transition-delay: calc(var(--i) * 0.14s); }
+  .armed.in li { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .armed li { transition: none; } }
+</style>
